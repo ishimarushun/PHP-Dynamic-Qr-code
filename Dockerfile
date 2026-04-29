@@ -1,4 +1,4 @@
-FROM php:8.3
+FROM php:8.4
 
 RUN if [ "$(grep '^VERSION_ID=' /etc/os-release | cut -d '=' -f 2 | tr -d '"')" -eq "9" ]; then \
         sed -i -e 's/deb.debian.org/archive.debian.org/g' \
@@ -56,10 +56,13 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update -q \
       5.6.*) PHP_EXTENSIONS="$PHP_EXTENSIONS mcrypt mysql";; \
       7.0.*|7.1.*) PHP_EXTENSIONS="$PHP_EXTENSIONS mcrypt";; \
     esac \
-    # Install Imagick from master on PHP >= 8.3, because imagick 3.7.0 broke on latest PHP releases and Imagick maintainers don't care to tag a newer release
+    # On PHP 8.3 use a known-good imagick snapshot; on PHP 8.4+ use the packaged imagick extension.
     && if [ $(php -r 'echo PHP_VERSION_ID;') -lt 80300 ]; then \
       PHP_EXTENSIONS="$PHP_EXTENSIONS imagick"; \
-      else PHP_EXTENSIONS="$PHP_EXTENSIONS https://api.github.com/repos/Imagick/imagick/tarball/28f27044e435a2b203e32675e942eb8de620ee58"; \
+    elif [ $(php -r 'echo PHP_VERSION_ID;') -lt 80400 ]; then \
+      PHP_EXTENSIONS="$PHP_EXTENSIONS https://api.github.com/repos/Imagick/imagick/tarball/28f27044e435a2b203e32675e942eb8de620ee58"; \
+    else \
+      PHP_EXTENSIONS="$PHP_EXTENSIONS imagick"; \
     fi \
     && install-php-extensions $PHP_EXTENSIONS \
     && if command -v a2enmod; then a2enmod rewrite; fi
